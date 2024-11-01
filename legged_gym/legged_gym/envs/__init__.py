@@ -34,6 +34,8 @@ from .a1.a1_parkour_config import A1ParkourCfg, A1ParkourCfgPPO
 from .go1.go1_config import Go1RoughCfg, Go1RoughCfgPPO
 from .g1.g1_robot import G1Robot
 from .g1.g1_config import G1RoughCfg, G1RoughCfgPPO
+from .h1.h1_robot import H1Robot
+from .h1.h1_config import H1RoughCfg, H1RoughCfgPPO
 
 import os
 
@@ -41,3 +43,4 @@ from legged_gym.utils.task_registry import task_registry
 task_registry.register( "a1", LeggedRobot, A1ParkourCfg(), A1ParkourCfgPPO() )
 task_registry.register( "go1", LeggedRobot, Go1RoughCfg(), Go1RoughCfgPPO() )
 task_registry.register("g1_rough", G1Robot, G1RoughCfg(), G1RoughCfgPPO())
+task_registry.register("h1", H1Robot, H1RoughCfg(), H1RoughCfgPPO())
