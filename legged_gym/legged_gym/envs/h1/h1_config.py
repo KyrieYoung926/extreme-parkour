@@ -140,40 +140,40 @@ class H1RoughCfg( LeggedRobotCfg ):
     class asset( LeggedRobotCfg.asset ):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/h1/urdf/h1.urdf'
         foot_name = "ankle"
-        penalize_contacts_on = ["shoulder", "hip", "elbow"]
+        penalize_contacts_on = ["shoulder", "hip", "elbow", "knee"]
         terminate_after_contacts_on = ["pelvis"]#, "thigh", "calf"]
         self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
     class terrain( LeggedRobotCfg.terrain ):
         mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
 
-    class rewards( LeggedRobotCfg.rewards ):
+    class rewards(LeggedRobotCfg.rewards):
         soft_dof_pos_limit = 0.9
         base_height_target = 1
-        only_positive_rewards = True # if true negative total rewards are clipped at zero (avoids early termination problems)
-        tracking_sigma = 0.2 # tracking reward = exp(-error^2/sigma)
+        only_positive_rewards = True
+        tracking_sigma = 0.2 
         soft_dof_vel_limit = 1
         soft_torque_limit = 0.4
-        max_contact_force = 300. # forces above this value are penalized
+        max_contact_force = 300.0 
 
-        class scales( LeggedRobotCfg.rewards.scales ):
-            # torques = -0.0002
-            # dof_pos_limits = -10.0
-            tracking_goal_vel = 1.5
-            tracking_yaw = 0.5
-            # regularization rewards
-            lin_vel_z = -1.0
-            ang_vel_xy = -0.05
-            orientation = -1.
+        class scales(LeggedRobotCfg.rewards.scales):
+            tracking_goal_vel = 1.5 
+            tracking_yaw = 0.5 
+            orientation = -0.1 
             dof_acc = -2.5e-7
-            collision = -10.
-            action_rate = -0.1
-            delta_torques = -1.0e-7
-            torques = -0.00001
-            hip_pos = -0.
-            dof_error = -0.04
-            feet_stumble = -1
-            feet_edge = -1
+
+            
+            lin_vel_z = -1.0 / 50
+            ang_vel_xy = -0.05 / 50
+            collision = -10.0 / 50
+            action_rate = -0.1 / 50
+            delta_torques = -1.0e-7 / 50
+            torques = -0.00001 / 50
+            hip_pos = -0.0  
+            dof_error = -0.04 / 50
+            feet_stumble = -1.0 / 50
+            feet_edge = -1.0 / 50
+
 
 
 
