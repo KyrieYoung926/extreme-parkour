@@ -108,6 +108,8 @@ class H1RoughCfg( LeggedRobotCfg ):
             'right_shoulder_yaw_joint': 0.0,
             'right_elbow_joint': 0.0,
         }
+        randomize_upperbody = False
+
         
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
@@ -140,10 +142,22 @@ class H1RoughCfg( LeggedRobotCfg ):
     class asset( LeggedRobotCfg.asset ):
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/h1/urdf/h1.urdf'
         foot_name = "ankle"
-        penalize_contacts_on = ["shoulder", "hip", "elbow", "knee"]
-        terminate_after_contacts_on = ["pelvis"]#, "thigh", "calf"]
-        self_collisions = 1 # 1 to disable, 0 to enable...bitwise filter
+        penalize_contacts_on = []
+        terminate_after_contacts_on = ["pelvis", 
+                                       "shoulder", 
+                                    #    "elbow",
+                                       "hip_roll", 
+                                       "hip_pitch", 
+                                       "knee",
+                                       "torso",
+                                       ]
+        self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
+        density = 0.001
+        angular_damping = 0.
+        linear_damping = 0.
+        n_lower_body_dofs: int = 12
+
     class terrain( LeggedRobotCfg.terrain ):
         mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
 
@@ -154,10 +168,12 @@ class H1RoughCfg( LeggedRobotCfg ):
         tracking_sigma = 0.2 
         soft_dof_vel_limit = 1
         soft_torque_limit = 0.4
-        max_contact_force = 300.0 
+        max_contact_force = 200.0 
+        min_dist = 0.1
+        max_dist = 0.2
 
         class scales(LeggedRobotCfg.rewards.scales):
-            tracking_goal_vel = 1.5 
+            tracking_goal_vel = 2.0
             tracking_yaw = 0.5 
             orientation = -0.1 
             dof_acc = -2.5e-7
@@ -170,10 +186,16 @@ class H1RoughCfg( LeggedRobotCfg ):
             delta_torques = -1.0e-7 / 50
             torques = -0.00001 / 50
             hip_pos = -0.0  
-            dof_error = -0.04 / 50
+            dof_error = -0.15
+            dof_error_upper = -0.2
+
             feet_stumble = -1.0 / 50
             feet_edge = -1.0 / 50
-
+            
+            feet_distance = 0.2
+            feet_contact_forces = -2e-3
+            dof_pos_limits = -10
+            dof_torque_limits = -0.1
 
 
 
