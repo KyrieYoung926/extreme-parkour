@@ -1252,7 +1252,6 @@ class H1Robot(LeggedRobot):
              4 *torch.abs(self.contact_forces[:, self.feet_indices, 2]), dim=1)
         return rew.float()
 
-    ################## Add rewards ##################
     def _reward_feet_edge(self):
         feet_pos_xy = ((self.rigid_body_states[:, self.feet_indices, :2] + self.terrain.cfg.border_size) / self.cfg.terrain.horizontal_scale).round().long()  # (num_envs, 4, 2)
         feet_pos_xy[..., 0] = torch.clip(feet_pos_xy[..., 0], 0, self.x_edge_mask.shape[0]-1)
@@ -1262,7 +1261,17 @@ class H1Robot(LeggedRobot):
         self.feet_at_edge = self.contact_filt & feet_at_edge
         rew = (self.terrain_levels > 3) * torch.sum(self.feet_at_edge, dim=-1)
         return rew
-
+    
+    ################## Add rewards ##################
+    def _reward_feet_distance(self):
+        foot_pos = self.rigid_body_states[:, self.feet_indices, :2]
+        foot_dist = torch.norm(foot_pos[:, 0, :] - foot_pos[:, 1, :], dim=1)
+        fd = self.cfg.rewards.min_dist
+        max_df = self.cfg.rewards.max_dist
+        d_min = torch.clamp(foot_dist - fd, -0.5, 0.)
+        d_max = torch.clamp(foot_dist - max_df, 0, 0.5)
+        return (torch.exp(-torch.abs(d_min) * 100) + torch.exp(-torch.abs(d_max) * 100)) / 2
+    
     def get_walking_cmd_mask(self, env_ids=None, return_all=False):
         if env_ids is None:
             env_ids = torch.arange(self.num_envs, device=self.device)
