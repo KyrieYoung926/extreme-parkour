@@ -150,6 +150,7 @@ class LeggedRobotCfg(BaseConfig):
         stepping_stone_distance = [0.02, 0.08]
         downsampled_scale = 0.075
         curriculum = True
+        max_difficulty = False
 
         all_vertical = False
         no_flat = True
