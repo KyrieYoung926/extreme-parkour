@@ -965,6 +965,10 @@ class G1Robot(LeggedRobot):
         self.termination_contact_indices = torch.zeros(len(termination_contact_names), dtype=torch.long, device=self.device, requires_grad=False)
         for i in range(len(termination_contact_names)):
             self.termination_contact_indices[i] = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], termination_contact_names[i])
+        knee_names = [s for s in body_names if self.cfg.asset.shank_name in s]
+        self.knee_indices = torch.zeros(len(knee_names), dtype=torch.long, device=self.device, requires_grad=False)
+        for i in range(len(knee_names)):
+            self.knee_indices[i] = self.gym.find_actor_rigid_body_handle(self.envs[0], self.actor_handles[0], knee_names[i])
 
         # hip_names = ["FR_hip_joint", "FL_hip_joint", "RR_hip_joint", "RL_hip_joint"]
         # self.hip_indices = torch.zeros(len(hip_names), dtype=torch.long, device=self.device, requires_grad=False)
@@ -1253,3 +1257,56 @@ class G1Robot(LeggedRobot):
         self.feet_at_edge = self.contact_filt & feet_at_edge
         rew = (self.terrain_levels > 3) * torch.sum(self.feet_at_edge, dim=-1)
         return rew
+
+    ################## Add rewards ##################
+    def _reward_feet_distance(self):
+        foot_pos = self.rigid_body_states[:, self.feet_indices, :2]
+        foot_dist = torch.norm(foot_pos[:, 0, :] - foot_pos[:, 1, :], dim=1)
+        fd = self.cfg.rewards.min_dist
+        max_df = self.cfg.rewards.max_dist
+        d_min = torch.clamp(foot_dist - fd, -0.5, 0.)
+        d_max = torch.clamp(foot_dist - max_df, 0, 0.5)
+        return (torch.exp(-torch.abs(d_min) * 100) + torch.exp(-torch.abs(d_max) * 100)) / 2
+    
+    def get_walking_cmd_mask(self, env_ids=None, return_all=False):
+        if env_ids is None:
+            env_ids = torch.arange(self.num_envs, device=self.device)
+        walking_mask0 = torch.abs(self.commands[env_ids, 0]) > self.cfg.commands.lin_vel_clip
+        walking_mask1 = torch.abs(self.commands[env_ids, 1]) > self.cfg.commands.lin_vel_clip
+        walking_mask2 = torch.abs(self.commands[env_ids, 2]) > self.cfg.commands.ang_vel_clip
+        walking_mask = walking_mask0 | walking_mask1 | walking_mask2
+        if return_all:
+            return walking_mask0, walking_mask1, walking_mask2, walking_mask
+        return walking_mask
+    
+    def _reward_feet_contact_forces(self):
+        rew = torch.norm(self.contact_forces[:, self.feet_indices, 2], dim=-1)
+        rew[rew < self.cfg.rewards.max_contact_force] = 0
+        rew[rew > self.cfg.rewards.max_contact_force] -= self.cfg.rewards.max_contact_force
+        rew[~self.get_walking_cmd_mask()] = 0
+        return rew
+    
+    def _reward_dof_pos_limits(self):
+        out_of_limits = -(self.dof_pos - self.dof_pos_limits[:, 0]).clip(max=0.)
+        out_of_limits += (self.dof_pos - self.dof_pos_limits[:, 1]).clip(min=0.)
+        return torch.sum(out_of_limits, dim=1)
+    
+    def _reward_dof_torque_limits(self):
+        out_of_limits = torch.sum((torch.abs(self.torques) / self.torque_limits - self.cfg.rewards.soft_torque_limit).clip(min=0), dim=1)
+        return out_of_limits    
+    
+    def _reward_dof_error_upper(self):
+        dof_error = torch.sum(torch.square(self.dof_pos - self.default_dof_pos)[:, self.cfg.asset.n_lower_body_dofs:], dim=1)
+        return dof_error
+    
+    def _reward_energy(self):
+        return torch.norm(torch.abs(self.torques * self.dof_vel), dim=-1)   
+
+    def _reward_knee_distance(self):
+        foot_pos = self.rigid_body_states[:, self.knee_indices, :2]
+        foot_dist = torch.norm(foot_pos[:, 0, :] - foot_pos[:, 1, :], dim=1)
+        fd = self.cfg.rewards.min_dist
+        max_df = self.cfg.rewards.max_knee_dist
+        d_min = torch.clamp(foot_dist - fd, -0.5, 0.)
+        d_max = torch.clamp(foot_dist - max_df, 0, 0.5)
+        return (torch.exp(-torch.abs(d_min) * 100) + torch.exp(-torch.abs(d_max) * 100)) / 2
