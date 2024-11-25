@@ -87,57 +87,40 @@ class G1RoughCfg( LeggedRobotCfg ):
         rot = [0.0,  0., 0.0, 1] # x,y,z,w [quat]
         lin_vel = [0.0, 0.0, 0.0]  # x,y,z [m/s]
         ang_vel = [0.0, 0.0, 0.0]  # x,y,z [rad/s]
-        default_joint_angles = {
-            'left_hip_pitch_joint': -0.4,
-            'left_hip_roll_joint': 0.0,
-            'left_hip_yaw_joint': 0.0,
-            'left_knee_joint': 0.8,
-            'left_ankle_pitch_joint': -0.35,
-            'left_ankle_roll_joint': 0.0,
-            
-            'right_hip_pitch_joint': -0.4,
-            'right_hip_roll_joint': 0.0,
-            'right_hip_yaw_joint': 0.0,
-            'right_knee_joint': 0.8,
-            'right_ankle_pitch_joint': -0.35,
-            'right_ankle_roll_joint': 0.0,
-            
-            'torso_joint': 0.0,
-            
-            'left_shoulder_pitch_joint': 0.0,
-            'left_shoulder_roll_joint': 0.0,
-            'left_shoulder_yaw_joint': 0.0,
-            'left_elbow_pitch_joint': 0.0,
-            
-            'right_shoulder_pitch_joint': 0.0,
-            'right_shoulder_roll_joint': 0.0,
-            'right_shoulder_yaw_joint': 0.0,
-            'right_elbow_pitch_joint': 0.0,
+        default_joint_angles = { # = target angles [rad] when action = 0.0
+           'left_hip_yaw_joint' : 0. ,   
+           'left_hip_roll_joint' : 0,               
+           'left_hip_pitch_joint' : -0.1,         
+           'left_knee_joint' : 0.3,       
+           'left_ankle_pitch_joint' : -0.2,     
+           'left_ankle_roll_joint' : 0,     
+           'right_hip_yaw_joint' : 0., 
+           'right_hip_roll_joint' : 0, 
+           'right_hip_pitch_joint' : -0.1,                                       
+           'right_knee_joint' : 0.3,                                             
+           'right_ankle_pitch_joint': -0.2,                              
+           'right_ankle_roll_joint' : 0,       
+           'torso_joint' : 0.
         }
         
     class control( LeggedRobotCfg.control ):
         # PD Drive parameters:
         control_type = 'P'
+          # PD Drive parameters:
         stiffness = {'hip_yaw': 150,
                      'hip_roll': 150,
-                     'hip_pitch': 200,
-                     'knee': 200,
-                     'ankle': 20,
-                     'torso': 200,
-                     'shoulder': 40,
-                     'elbow': 40,
+                     'hip_pitch': 150,
+                     'knee': 300,
+                     'ankle': 40,
                      }  # [N*m/rad]
-        damping = {  'hip_yaw': 5,
-                     'hip_roll': 5,
-                     'hip_pitch': 5,
-                     'knee': 5,
-                     'ankle': 4,
-                     'torso': 5,
-                     'shoulder': 10,
-                     'elbow': 10,
+        damping = {  'hip_yaw': 2,
+                     'hip_roll': 2,
+                     'hip_pitch': 2,
+                     'knee': 4,
+                     'ankle': 2,
                      }  # [N*m/rad]  # [N*m*s/rad]
         # action scale: target angle = actionScale * action + defaultAngle
-        action_scale = 0.5
+        action_scale = 0.25
         # decimation: Number of control action updates @ sim DT per policy DT
         decimation = 20
     
@@ -148,8 +131,14 @@ class G1RoughCfg( LeggedRobotCfg ):
         # file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/go1/urdf/go1_new.urdf'
         file = '{LEGGED_GYM_ROOT_DIR}/resources/robots/g1/urdf/g1.urdf'
         foot_name = "ankle_roll"
-        penalize_contacts_on = ["shoulder", "elbow", "hip"]
-        terminate_after_contacts_on = ['torso_link']
+        terminate_after_contacts_on = ["pelvis", 
+                                       "shoulder", 
+                                       "elbow",
+                                       "hip_roll", 
+                                       "hip_pitch", 
+                                       "knee",
+                                       "torso",
+                                       ]
         self_collisions = 0 # 1 to disable, 0 to enable...bitwise filter
         flip_visual_attachments = False
         density = 0.001
@@ -157,48 +146,60 @@ class G1RoughCfg( LeggedRobotCfg ):
         linear_damping = 0.
         n_lower_body_dofs: int = 12
 
+        shank_name: str = 'knee_link'
+
     class terrain( LeggedRobotCfg.terrain ):
         mesh_type = 'trimesh' # "heightfield" # none, plane, heightfield or trimesh
 
     class rewards( LeggedRobotCfg.rewards ):
-        soft_dof_pos_limit = 0.9
-        base_height_target = 1
+        soft_dof_pos_limit = 0.6
+        base_height_target = 0.728
         only_positive_rewards = True
-        tracking_sigma = 0.2 
+        tracking_sigma = 0.23
         soft_dof_vel_limit = 1
         soft_torque_limit = 0.4
-        max_contact_force = 350.0 
-        min_dist = 0.2
+        max_contact_force = 400.0 
+        min_dist = 0.25
         max_dist = 0.5
         max_knee_dist = 0.5
 
 
         class scales( LeggedRobotCfg.rewards.scales ):
-            tracking_goal_vel = 2.0
+            termination = -1.0
+
+            tracking_goal_vel = 0.5
             tracking_yaw = 0.5 
-            orientation = -1.0 
-            dof_acc = -2.5e-7
+            tracking_ang_vel = 0.5
+            tracking_lin_vel = 1.0
 
-            
-            lin_vel_z = -1.0 
+
+            orientation = -2.0
+            dof_acc = -1e-6 
+
+            base_height = -0.5
+
+            lin_vel_z = -2.0
             ang_vel_xy = -0.1
-            collision = -10.0
-            action_rate = -0.1
-            delta_torques = -1.0e-7
-            torques = -0.00001 
-            hip_pos = -0.0  
-            dof_error = -0.15
-            dof_error_upper = -0.2
+            collision = -10.0 / 5
+            action_rate = -0.05
+            delta_torques = -1.0e-7 / 50
+            torques = -1e-4 
+
+            feet_air_time = 1.0
+
+            hip_pos = -0.5  
+            dof_error = -0.5 
+            dof_error_upper = 0
 
 
-            feet_stumble = -1.025
-            feet_edge = -1.0
-            
+            feet_stumble = 0.0
+            feet_edge = -1.0 / 50
+             
             feet_distance = 0.2
-            feet_contact_forces = -5e-4
+            feet_contact_forces = -2e-3
             dof_pos_limits = -10
-            dof_torque_limits = -1.0
-            energy = -1e-3
+            dof_torque_limits = -1.0/ 10
+            energy = 0 # -1e-5
 
 
 class G1RoughCfgPPO( LeggedRobotCfgPPO ):
